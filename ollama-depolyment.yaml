@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama-container
+spec:
+  replicas: 1  # Adjust as needed
+  selector:
+    matchLabels:
+      app: ollama-container
+  template:
+    metadata:
+      labels:
+        app: ollama-container
+    spec:
+      containers:
+      - name: ollama-container
+        image: ollama/ollama
+        ports:
+        - containerPort: 11434
+        volumeMounts:
+        - name: ollama-data
+          mountPath: /root/.ollama  # Mount path inside the container
+      volumes:
+      - name: ollama-data
+        emptyDir: {}  # Define emptyDir volume
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: streamlit-app
+spec:
+  replicas: 1  # Adjust as needed
+  selector:
+    matchLabels:
+      app: streamlit-app
+  template:
+    metadata:
+      labels:
+        app: streamlit-app
+    spec:
+      containers:
+      - name: streamlit-app
+        image: jyothiram266/ollama-langchain:v1
+        ports:
+        - containerPort: 8501
