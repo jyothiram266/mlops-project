@@ -30,11 +30,11 @@ export const options = {
 
 export function setup() {
     console.log('Setting up the test environment...');
-    return { baseUrl: 'http://localhost:8080' };
+    return { baseUrl: 'http://localhost:11434' };
 }
 
 export default function (data) {
-    const url = `${data.baseUrl}/generate_text`;
+    const url = `${data.baseUrl}/api/generate`;
     const prompt = testData[Math.floor(Math.random() * testData.length)].prompt;
     const payload = JSON.stringify({ prompt });
     const params = { headers: { 'Content-Type': 'application/json' } };
