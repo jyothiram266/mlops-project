@@ -210,10 +210,10 @@ spec:
 - Verify Deployment: Use ```kubectl get deployments``` , ```kubectl get svc``` and ```kubectl get pods``` to verify that the deployment and the service is successful and pods are running.
 - Access Pod: Use ```kubectl exec -it <ollama-pod-name> -- /bin/bash``` to access the running pod and check the contents of /root/.ollama to verify the usage of the emptyDir volume.
 
-###Load Testing
+### Load Testing
 We used k6 for load testing. Below is a k6 script for simulating various levels of concurrent requests.
 
-###3k6 Script
+### k6 Script
 ```load_test.js
 import http from 'k6/http';
 import { check, sleep } from 'k6';
@@ -282,7 +282,7 @@ k6 run --out json=baseline_metrics.json load_test.js
 ```
 Analyze and document key metrics:
 
-####analyze_baseline.py
+#### analyze_baseline.py
 ```
 import json
 
@@ -321,3 +321,71 @@ Run the analysis script:
 ```
 python analyze_baseline.py
 ```
+
+Horizontal Pod Autoscaler
+Implement Horizontal Pod Autoscaler (HPA) to scale the deployment based on CPU and memory usage.
+
+```hpa.yaml
+
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ollama-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ollama-deployment
+  minReplicas: 1
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 50
+```
+Apply the HPA configuration:
+```
+kubectl apply -f hpa.yaml
+```
+
+Results
+
+After running the load tests and analyzing the baseline performance metrics, document the following:
+
+Total Requests: Number of requests sent during the test.
+Throughput: Requests per second.
+Average Response Time: Average time taken for requests.
+Median Response Time: Median time taken for requests.
+95th Percentile Response Time: Time taken for 95% of requests.
+Error Rate: Percentage of requests that resulted in errors.
+Sample Results
+```
+Total Requests: 1000
+Throughput (requests/sec): 16.67
+Average Response Time (ms): 120.34
+Median Response Time (ms): 110
+95th Percentile Response Time (ms): 180
+Error Rate (%): 0.50
+```
+
+### Best Practices and Lessons Learned
+#### Best Practices
+- Modular Design: Break down the implementation into modular components for ease of management and testing.
+- Scalability: Implement autoscaling to handle varying loads efficiently.
+- Monitoring and Logging: Set up comprehensive monitoring and logging to track performance and troubleshoot issues.
+
+Lessons Learned
+
+- Resource Management: Properly allocate resources to avoid bottlenecks and ensure smooth scaling.
+- Load Testing: Regularly perform load testing to understand system behavior under different loads and optimize accordingly.
+- Continuous Integration: Integrate testing and deployment processes into a continuous integration pipeline to ensure consistency and reliability.
+
