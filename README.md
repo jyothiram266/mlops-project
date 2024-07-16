@@ -133,7 +133,7 @@ kind: Deployment
 metadata:
   name: ollama-container
 spec:
-  replicas: 1  # Adjust as needed
+  replicas: 3  # Adjust as needed
   selector:
     matchLabels:
       app: ollama-container
@@ -144,7 +144,7 @@ spec:
     spec:
       containers:
       - name: ollama-container
-        image: ollama/ollama
+        image: jyothiram266/ollama-service
         ports:
         - containerPort: 8501
         - containerPort: 11434
@@ -252,6 +252,11 @@ Run the k6 test to establish baseline performance metrics:
 ```
 k6 run --out json=baseline_metrics.json load_test.js
 ```
+
+above command create a baseline_metrice.js file looks like this :
+
+![4](https://github.com/user-attachments/assets/f26d2c1e-a8d9-40af-a8a2-f88a8957a111)
+
 Analyze and document key metrics:
 
 #### analyze_baseline.py
@@ -264,8 +269,6 @@ with open('baseline_metrics.json', 'r') as f:
 
 # Extract and print key metrics
 total_requests = data['metrics']['requests']['count']
-duration_seconds = sum([int(stage['duration'].replace('m', '')) * 60 for stage in data['options']['stages']])
-throughput = total_requests / duration_seconds
 
 response_times = data['metrics']['http_req_duration']
 avg_response_time = response_times['avg']
@@ -276,7 +279,6 @@ error_rate = data['metrics']['errors']['rate'] * 100
 
 results = f"""
 Total Requests: {total_requests}
-Throughput (requests/sec): {throughput:.2f}
 Average Response Time (ms): {avg_response_time:.2f}
 Median Response Time (ms): {med_response_time:.2f}
 95th Percentile Response Time (ms): {p95_response_time:.2f}
@@ -288,11 +290,26 @@ print(results)
 # Save results to a file
 with open('performance_results.txt', 'w') as f:
     f.write(results)
+
 ```
 Run the analysis script:
 ```
 python analyze_baseline.py
 ```
+Results
+
+After running the load tests and analyzing the baseline performance metrics, document the following:
+
+Total Requests: Number of requests sent during the test.
+Throughput: Requests per second.
+Average Response Time: Average time taken for requests.
+Median Response Time: Median time taken for requests.
+95th Percentile Response Time: Time taken for 95% of requests.
+Error Rate: Percentage of requests that resulted in errors.
+
+
+![5](https://github.com/user-attachments/assets/cd4a6dbd-5ad1-42d4-a60d-7eb93cb90b5d)
+
 
 Horizontal Pod Autoscaler
 Implement Horizontal Pod Autoscaler (HPA) to scale the deployment based on CPU and memory usage.
@@ -308,7 +325,7 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: ollama-deployment
-  minReplicas: 1
+  minReplicas: 3
   maxReplicas: 10
   metrics:
   - type: Resource
@@ -328,26 +345,8 @@ Apply the HPA configuration:
 ```
 kubectl apply -f hpa.yaml
 ```
-
-Results
-
-After running the load tests and analyzing the baseline performance metrics, document the following:
-
-Total Requests: Number of requests sent during the test.
-Throughput: Requests per second.
-Average Response Time: Average time taken for requests.
-Median Response Time: Median time taken for requests.
-95th Percentile Response Time: Time taken for 95% of requests.
-Error Rate: Percentage of requests that resulted in errors.
-Sample Results
-```
-Total Requests: 1000
-Throughput (requests/sec): 16.67
-Average Response Time (ms): 120.34
-Median Response Time (ms): 110
-95th Percentile Response Time (ms): 180
-Error Rate (%): 0.50
-```
+### Kubernetes Architecture
+[View on Eraser![](https://app.eraser.io/workspace/XhiN0vTQ5p1O5kFxPHzh/preview?elements=baIOhHmzNmNkylYJTOd1Hw&type=embed)](https://app.eraser.io/workspace/XhiN0vTQ5p1O5kFxPHzh?elements=baIOhHmzNmNkylYJTOd1Hw)
 
 ### Best Practices and Lessons Learned
 #### Best Practices
