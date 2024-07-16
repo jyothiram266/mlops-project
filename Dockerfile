@@ -1,15 +1,14 @@
-FROM python:3.9-slim
+FROM ollama/ollama
 
-# Create app directory
-WORKDIR /app
+WORKDIR /root
 
-# Copy the files
 COPY requirements.txt ./
-COPY app.py ./
 
-#install the dependecies
-RUN pip install --upgrade pip
+RUN apt update 
+RUN apt-get install -y python3 python3-pip vim git
 RUN pip install -r requirements.txt
 
 EXPOSE 8501
-ENTRYPOINT ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+EXPOSE 11434
+ENTRYPOINT ["./entrypoint.sh"]
+
