@@ -411,22 +411,14 @@ jobs:
 ```
 #### Usage Instructions
 
-**Commit**: Save the deploy.yml file to your repository under ```.github/workflows/.```
-
-**Secrets**: Configure the following secrets in your repository settings on GitHub:
-
-**DOCKER_HUB_USERNAME**: Your Docker Hub username.
-
-
-**DOCKER_HUB_ACCESS_TOKEN**: Your Docker Hub access token.
-
-**AWS_ACCESS_KEY_ID**: AWS access key ID with permissions to EKS.
-
-**AWS_SECRET_ACCESS_KEY**: AWS secret access key corresponding to the access key ID.
-
-**AWS_REGION**: AWS region where your EKS cluster is located.
-
-**Deploy**: Push changes to the main branch to trigger the workflow. GitHub Actions will automatically build your Docker image, push it to Docker Hub, and deploy it to AWS EKS.
+- **Commit**: Save the deploy.yml file to your repository under ```.github/workflows/.```
+- **Secrets**: Configure the following secrets in your repository settings on GitHub:
+- **DOCKER_HUB_USERNAME**: Your Docker Hub username.
+- **DOCKER_HUB_ACCESS_TOKEN**: Your Docker Hub access token.
+- **AWS_ACCESS_KEY_ID**: AWS access key ID with permissions to EKS.
+- **AWS_SECRET_ACCESS_KEY**: AWS secret access key corresponding to the access key ID.
+- **AWS_REGION**: AWS region where your EKS cluster is located.
+- **Deploy**: Push changes to the main branch to trigger the workflow. GitHub Actions will automatically build your Docker image, push it to Docker Hub, and deploy it to AWS EKS.
 
 
 Certainly! Here are some best practices and lessons learned from deploying a scalable Language Model inference service using Ollama in a Kubernetes environment:
