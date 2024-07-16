@@ -144,7 +144,7 @@ spec:
     spec:
       containers:
       - name: ollama-container
-        image: ollama/ollama
+        image: jyothiram266/ollama-service
         ports:
         - containerPort: 8501
         - containerPort: 11434
