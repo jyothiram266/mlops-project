@@ -324,7 +324,7 @@ spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: ollama-deployment
+    name: ollama-container
   minReplicas: 3
   maxReplicas: 10
   metrics:
@@ -348,15 +348,114 @@ kubectl apply -f hpa.yaml
 ### Kubernetes Architecture
 [View on Eraser![](https://app.eraser.io/workspace/XhiN0vTQ5p1O5kFxPHzh/preview?elements=baIOhHmzNmNkylYJTOd1Hw&type=embed)](https://app.eraser.io/workspace/XhiN0vTQ5p1O5kFxPHzh?elements=baIOhHmzNmNkylYJTOd1Hw)
 
-### Best Practices and Lessons Learned
-#### Best Practices
-- Modular Design: Break down the implementation into modular components for ease of management and testing.
-- Scalability: Implement autoscaling to handle varying loads efficiently.
-- Monitoring and Logging: Set up comprehensive monitoring and logging to track performance and troubleshoot issues.
+### Setting Up Continuous Integration and Deployment with GitHub Actions
+To automate the build and deployment process for your Ollama service using GitHub Actions, follow these steps:
 
-Lessons Learned
+### GitHub Actions Workflow
 
-- Resource Management: Properly allocate resources to avoid bottlenecks and ensure smooth scaling.
-- Load Testing: Regularly perform load testing to understand system behavior under different loads and optimize accordingly.
-- Continuous Integration: Integrate testing and deployment processes into a continuous integration pipeline to ensure consistency and reliability.
+Below is the YAML configuration (deploy.yml) for the CI/CD pipeline using GitHub Actions. This workflow builds your Docker image, pushes it to Docker Hub, and deploys it to AWS EKS:
 
+```
+name: CI/CD Pipeline with AWS EKS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      - name: Build and push Docker image
+        run: |
+          docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/ollama-service:latest .
+          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/ollama-service:latest
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install AWS CLI
+        uses: aws-actions/aws-cli-action@v2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Update kubeconfig with EKS cluster
+        run: aws eks update-kubeconfig --name <your-cluster-name> --region ${{ secrets.AWS_REGION }}
+
+      - name: Deploy to EKS
+        run: kubectl apply -f kubernetes/deployment.yaml -f kubernetes/service.yaml -f kubernetes/hpa.yaml
+```
+#### Usage Instructions
+
+**Commit**: Save the deploy.yml file to your repository under ```.github/workflows/.```
+
+**Secrets**: Configure the following secrets in your repository settings on GitHub:
+
+**DOCKER_HUB_USERNAME**: Your Docker Hub username.
+**DOCKER_HUB_ACCESS_TOKEN**: Your Docker Hub access token.
+**AWS_ACCESS_KEY_ID**: AWS access key ID with permissions to EKS.
+**AWS_SECRET_ACCESS_KEY**: AWS secret access key corresponding to the access key ID.
+**AWS_REGION**: AWS region where your EKS cluster is located.
+**Deploy**: Push changes to the main branch to trigger the workflow. GitHub Actions will automatically build your Docker image, push it to Docker Hub, and deploy it to AWS EKS.
+
+
+Certainly! Here are some best practices and lessons learned from deploying a scalable Language Model inference service using Ollama in a Kubernetes environment:
+
+### Best Practices
+
+1. **Thorough Resource Planning**: 
+   - **Lesson Learned**: Initially underestimating resource requirements led to performance issues.
+   - **Best Practice**: Conduct thorough capacity planning and allocate resources (CPU, memory) based on realistic workload projections. Adjust resource limits dynamically based on monitoring data.
+
+2. **Effective Use of Autoscaling**:
+   - **Lesson Learned**: Basic HPA setup didn't always meet dynamic workload demands effectively.
+   - **Best Practice**: Implement custom metrics alongside standard CPU/memory metrics for HPA. Fine-tune scaling thresholds and intervals to match application response times and user load patterns.
+
+3. **Containerization and Dependency Management**:
+   - **Lesson Learned**: Managing dependencies across Ollama, Python, and Kubernetes was complex.
+   - **Best Practice**: Utilize multi-stage Docker builds for streamlined container images. Clearly document dependency versions and ensure compatibility across environments to minimize issues during deployment and updates.
+
+4. **Robust CI/CD Pipelines**:
+   - **Lesson Learned**: Manual deployment processes caused delays and errors.
+   - **Best Practice**: Implement automated CI/CD pipelines using tools like GitLab CI or Jenkins. Include automated testing, linting, image building, and deployment stages to ensure consistent and reliable updates to the Kubernetes cluster.
+
+5. **Comprehensive Monitoring and Logging**:
+   - **Lesson Learned**: Initial gaps in monitoring and logging hindered troubleshooting and performance optimization.
+   - **Best Practice**: Integrate Prometheus for monitoring and Grafana for visualization. Centralize logging with Elasticsearch and Fluentd for real-time insights into application performance, resource usage, and potential issues.
+
+### Lessons Learned
+
+1. **Real-World Application of Kubernetes**: 
+   - Understanding Kubernetes beyond theory, such as practical deployment strategies and optimizations, was crucial for effectively managing containerized applications in production.
+
+2. **Adaptability and Iterative Improvement**: 
+   - Emphasizing adaptability in configuring Kubernetes resources and iteratively improving deployment strategies based on performance metrics and user feedback.
+
+3. **Documentation and Knowledge Sharing**: 
+   - Maintaining comprehensive documentation throughout the project facilitated team collaboration, troubleshooting, and onboarding of new members. Clear documentation also supported continuous improvement based on shared insights and lessons learned.
+
+By incorporating these best practices and lessons learned, future projects deploying complex applications in Kubernetes environments can benefit from improved scalability, reliability, and operational efficiency. These insights contribute to a more informed approach to managing containerized deployments, enhancing overall project success and team productivity.
