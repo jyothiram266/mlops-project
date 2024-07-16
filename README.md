@@ -324,7 +324,7 @@ spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: ollama-deployment
+    name: ollama-container
   minReplicas: 3
   maxReplicas: 10
   metrics:
