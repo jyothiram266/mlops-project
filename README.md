@@ -300,12 +300,12 @@ Results
 
 After running the load tests and analyzing the baseline performance metrics, document the following:
 
-Total Requests: Number of requests sent during the test.
-Throughput: Requests per second.
-Average Response Time: Average time taken for requests.
-Median Response Time: Median time taken for requests.
-95th Percentile Response Time: Time taken for 95% of requests.
-Error Rate: Percentage of requests that resulted in errors.
+- Total Requests: Number of requests sent during the test.
+- Throughput: Requests per second.
+- Average Response Time: Average time taken for requests.
+- Median Response Time: Median time taken for requests.
+- 95th Percentile Response Time: Time taken for 95% of requests.
+- Error Rate: Percentage of requests that resulted in errors.
 
 
 ![5](https://github.com/user-attachments/assets/cd4a6dbd-5ad1-42d4-a60d-7eb93cb90b5d)
