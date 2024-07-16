@@ -104,14 +104,14 @@ docker build -t jyothiram266/ollama-service .
 
 you should be able to see the containers running by executing ```docker images ls``` command as shown below.
 
-####Running the ollama-image
+### Running the ollama-image
 
 Now that we’ve build the container, we run the container with docker-startup run , which does the following:
 
-docker run --rm --name gen-chatbot -v $PWD:/app -p 8501:8501 -p 11434:11434 streamlit-llm
+```docker run --rm --name gen-chatbot -v $PWD:/app -p 8501:8501 -p 11434:11434 streamlit-llm```
 
 We should be able to check, if ollama is running by calling ```http://localhost:11434``` as shown in the screenshot below.
-Let's now download the required model, by logging into the docker container using the docker exec command as shown below.
+
 
 The first time you run the server will take a very long time, because it is pulling down the 8B parameter model into the .ollama folder, the latest llama3 model. It will then check to SHA hash to see if it correctly pulled it down if you already have the model.
 
