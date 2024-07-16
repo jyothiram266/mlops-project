@@ -111,18 +111,16 @@ Now that we’ve build the container, we run the container with docker-startup r
 ```docker run --rm --name gen-chatbot -v $PWD:/app -p 8501:8501 -p 11434:11434 streamlit-llm```
 
 We should be able to check, if ollama is running by calling ```http://localhost:11434``` as shown in the screenshot below.
-
+![1](https://github.com/user-attachments/assets/f6066449-bc06-4d5d-8890-c7c8c455a8d1)
 
 The first time you run the server will take a very long time, because it is pulling down the 8B parameter model into the .ollama folder, the latest llama3 model. It will then check to SHA hash to see if it correctly pulled it down if you already have the model.
 
 You might notice two ports being exported: 8501 and 11434. Port 8501 is where your application is served (so you’ll go to hostname:8501), and port 11434 is where Ollama (your LLM) is being served. Anytime you want to send an LLM command to Ollama, you would use that connection, but we’re letting the streamlit internals take care of that.
 
-
-
 Lets try to run a prompt “generate a story about dog called bozo”. You shud be able to see the console logs reflecting the API calls, that are coming from our Streamlit application, as shown below
-
-
 You can see in below screenshot, the response, I got for the prompt I sent
+![3](https://github.com/user-attachments/assets/44e4b087-ee77-4b35-9a43-2e8f50f87782)
+![2](https://github.com/user-attachments/assets/482cbac8-bbbf-4b44-b7a7-0861df65218d)
 
 Now that the application is containerized, we can deploy it on Kubernetes
 
@@ -148,6 +146,7 @@ spec:
       - name: ollama-container
         image: ollama/ollama
         ports:
+        - containerPort: 8501
         - containerPort: 11434
         volumeMounts:
         - name: ollama-data
@@ -155,28 +154,6 @@ spec:
       volumes:
       - name: ollama-data
         emptyDir: {}  # Define emptyDir volume
-
----
-
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: streamlit-app
-spec:
-  replicas: 1  # Adjust as needed
-  selector:
-    matchLabels:
-      app: streamlit-app
-  template:
-    metadata:
-      labels:
-        app: streamlit-app
-    spec:
-      containers:
-      - name: streamlit-app
-        image: jyothiram266/ollama-langchain:v1
-        ports:
-        - containerPort: 8501
 
 ```
 Service-manifest-file
@@ -193,20 +170,10 @@ spec:
     - protocol: TCP
       port: 11434
       targetPort: 11434
-
----
-
-apiVersion: v1
-kind: Service
-metadata:
-  name: streamlit-service
-spec:
-  selector:
-    app: streamlit-app
-  ports:
     - protocol: TCP
       port: 8501
       targetPort: 8501
+  
 
 ```
 
