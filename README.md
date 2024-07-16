@@ -133,7 +133,7 @@ kind: Deployment
 metadata:
   name: ollama-container
 spec:
-  replicas: 1  # Adjust as needed
+  replicas: 3  # Adjust as needed
   selector:
     matchLabels:
       app: ollama-container
@@ -325,7 +325,7 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: ollama-deployment
-  minReplicas: 1
+  minReplicas: 3
   maxReplicas: 10
   metrics:
   - type: Resource
@@ -345,6 +345,8 @@ Apply the HPA configuration:
 ```
 kubectl apply -f hpa.yaml
 ```
+### Kubernetes Architecture
+[View on Eraser![](https://app.eraser.io/workspace/XhiN0vTQ5p1O5kFxPHzh/preview?elements=baIOhHmzNmNkylYJTOd1Hw&type=embed)](https://app.eraser.io/workspace/XhiN0vTQ5p1O5kFxPHzh?elements=baIOhHmzNmNkylYJTOd1Hw)
 
 ### Best Practices and Lessons Learned
 #### Best Practices
