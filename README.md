@@ -67,7 +67,7 @@ from langchain_community.llms import Ollama
 import streamlit as st
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 
-llm = Ollama(model="moondream", base_url="http://ollama-container:11434", verbose=True)
+llm = Ollama(model="moondream", base_url="http://ollama-container:11434/api/generate", verbose=True)
 
 def sendPrompt(prompt):
     global llm
@@ -164,6 +164,7 @@ kind: Service
 metadata:
   name: ollama-service
 spec:
+  type: NodePort
   selector:
     app: ollama-container
   ports:
