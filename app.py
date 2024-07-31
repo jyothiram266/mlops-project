@@ -1,24 +1,32 @@
+from langchain_community.llms import Ollama
 import streamlit as st
-import ollama
+from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 
-with st.sidebar:
-    your_name = st.text_input("What's your name?")
+llm = Ollama(model="phi:latest", base_url="http://ollama-container:11434", verbose=True)
 
-if your_name:
-    st.title("Hi there, " + your_name)
-else:
-    st.title("My Very Own Chatbot 💬")
+def sendPrompt(prompt):
+    global llm
+    response = llm.invoke(prompt)
+    return response
 
-st.caption("🚀 A Streamlit chatbot powered by OpenAI")
-if "messages" not in st.session_state:
-    st.session_state["messages"] = [{"role": "assistant", "content": "How can I help you?"}]
+st.title("Chat with Ollama")
+if "messages" not in st.session_state.keys(): 
+    st.session_state.messages = [
+        {"role": "assistant", "content": "Ask me a question !"}
+    ]
 
-for msg in st.session_state.messages:
-    st.chat_message(msg["role"]).write(msg["content"])
-
-if prompt := st.chat_input():
+if prompt := st.chat_input("Your question"): 
     st.session_state.messages.append({"role": "user", "content": prompt})
-    st.chat_message("user").write(prompt)
-    msg = ollama.chat(model='llama3', messages=[{'role':'user', 'content': prompt}])['message']['content']
-    st.session_state.messages.append({"role": "assistant", "content": msg})
-    st.chat_message("assistant").write(msg)
+
+for message in st.session_state.messages: 
+    with st.chat_message(message["role"]):
+        st.write(message["content"])
+        
+if st.session_state.messages[-1]["role"] != "assistant":
+    with st.chat_message("assistant"):
+        with st.spinner("Thinking..."):
+            response = sendPrompt(prompt)
+            print(response)
+            st.write(response)
+            message = {"role": "assistant", "content": response}
+            st.session_state.messages.append(message) 
