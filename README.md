@@ -76,7 +76,7 @@ We can bring up the applications by running the docker-compose up command, once 
 
 
 you should be able to see the containers running by executing ```docker-compose ps``` .
-
+![10](https://raw.githubusercontent.com/jyothiram266/mlops-project/master/screenshots/9.png)
 
 We should be able to check, if ollama is running by calling http://localhost:11434, as shown in the screenshot below.
 ![1](https://github.com/user-attachments/assets/f6066449-bc06-4d5d-8890-c7c8c455a8d1)
