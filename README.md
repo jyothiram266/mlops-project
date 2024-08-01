@@ -21,6 +21,13 @@ Design, implement, and deploy a scalable Language Model inference service using 
 
 ## Implementation
 
+We will build 2 containers,
+
+Ollama container will be using the host volume to store and load the models (/root/.ollama is mapped to the local ./data/ollama). Ollama container will listen on 11434 (external port, which is internally mapped to 11434)
+Streamlit chatbot application will listen on 8501 (external port, which is internally mapped to 8501).
+
+![7](https://raw.githubusercontent.com/jyothiram266/mlops-project/master/screenshots/7.png)
+
 ### Dockerfile
 
 
@@ -42,89 +49,52 @@ RUN pip install -r requirements.txt
 EXPOSE 8501
 ENTRYPOINT ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
 ```
-Notice that we must set the WORKDIR=/root. This is where ollama is installed, and when we run ollama/serve, it’ll look for a data folder where the models will be stored, which is in the hidden folder .ollama. 
-In the final line, the ENTRYPOINT is a script, which is necessary because we need to run multiple commands when running the server the following command will be runned.
-```
-#!/bin/bash
-
-# Start the Ollama server at port 11434
-echo "Starting the Ollama Server"
-ollama serve &
-
-# Check to see if the Llama3 LLM is available
-echo "Waiting for Facebook's Open Source Llama3 downloads"
-sleep 5 # Necessary if server is not yet up
-ollama pull llama3
-
-# Start the streamlit server, blocking exit
-echo "Starting the Streamlit server"
-streamlit run app.py --server.port=8501 --server.address=0.0.0.0
-```
-When you start the container , the entrypoint.sh script has a sleep 5 command that waits for five seconds. That’s because if the ollama server isn’t up by the time we need to pull down the newest llama3 model, it will not do it. In fact, if your computer is slower than mine, you may need to sleep for longer, which you can edit this file.
-
-### API Wrapper
-We implemented a API Streamlit Chatbot wrapper(app.py) around Ollama for text generation.
-```Chatbot-Api-Wrapper
-from langchain_community.llms import Ollama
-import streamlit as st
-from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
-
-llm = Ollama(model="moondream", base_url="http://ollama-container:11434/api/generate", verbose=True)
-
-def sendPrompt(prompt):
-    global llm
-    response = llm.invoke(prompt)
-    return response
-
-st.title("Chat with Ollama")
-if "messages" not in st.session_state.keys(): 
-    st.session_state.messages = [
-        {"role": "assistant", "content": "Ask me a question !"}
-    ]
-
-if prompt := st.chat_input("Your question"): 
-    st.session_state.messages.append({"role": "user", "content": prompt})
-
-for message in st.session_state.messages: 
-    with st.chat_message(message["role"]):
-        st.write(message["content"])
-        
-if st.session_state.messages[-1]["role"] != "assistant":
-    with st.chat_message("assistant"):
-        with st.spinner("Thinking..."):
-            response = sendPrompt(prompt)
-            print(response)
-            st.write(response)
-            message = {"role": "assistant", "content": response}
-            st.session_state.messages.append(message)
-```
+We are using the python docker image, as the base image, and creating a working directory called /app. We are then copying our application files there, and running the pip installs to install all the dependencies. We are then exposing the port 8501 and starting the streamlit application.
 
 We can build the docker image using docker build command, as shown below.
+
+You should be able to check if the Docker image is built, using docker images command, as shown below.
+
+
+Let's now build a docker-compose configuration file, to define the network of the Streamlit application and the Ollama container, so that they can interact with each other. We will also be defining the various port configurations, as shown in the picture above. For Ollama, we will also be mapping the volume, so that whatever models are pulled, are persisted.
+
+```yaml
+version: '3'
+services:
+  ollama-container:
+    image: ollama/ollama
+    volumes:
+      - ./data/ollama:/root/.ollama
+    ports:
+      - 11434:11434
+  streamlit-app:
+    image: jyothiram266/streamlight-app
+    ports:
+      - 8501:8501
 ```
-docker build -t jyothiram266/ollama-service .
-```
+We can bring up the applications by running the docker-compose up command, once you execute ```docker-compose up```, you should be able to see that both the containers start running, as shown in the .
 
-you should be able to see the containers running by executing ```docker images ls``` command as shown below.
 
-### Running the ollama-image
+you should be able to see the containers running by executing ```docker-compose ps``` .
 
-Now that we’ve build the container, we run the container with docker-startup run , which does the following:
 
-```docker run --rm --name gen-chatbot -v $PWD:/app -p 8501:8501 -p 11434:11434 streamlit-llm```
-
-We should be able to check, if ollama is running by calling ```http://localhost:11434``` as shown in the screenshot below.
+We should be able to check, if ollama is running by calling http://localhost:11434, as shown in the screenshot below.
 ![1](https://github.com/user-attachments/assets/f6066449-bc06-4d5d-8890-c7c8c455a8d1)
+``` 
+docker exec -it ollama-langchain-ollama-container-1 ollama run phi 
+```
+Since we are using the model phi, we are pulling that model and testing it by running it. you can see the screenshot below, where the phi model is downloaded and will start running (since we are using -it flag we should be able to interact and test with sample prompts)
 
-The first time you run the server will take a very long time, because it is pulling down the 8B parameter model into the .ollama folder, the latest llama3 model. It will then check to SHA hash to see if it correctly pulled it down if you already have the model.
-
-You might notice two ports being exported: 8501 and 11434. Port 8501 is where your application is served (so you’ll go to hostname:8501), and port 11434 is where Ollama (your LLM) is being served. Anytime you want to send an LLM command to Ollama, you would use that connection, but we’re letting the streamlit internals take care of that.
+you should be able to see the downloaded model files and manifests in your local folder ./data/ollama (which is internally mapped to /root/.ollama for the container, which is where Ollama looks for the downloaded models to serve) 
 
 Lets try to run a prompt “generate a story about dog called bozo”. You shud be able to see the console logs reflecting the API calls, that are coming from our Streamlit application, as shown below
-You can see in below screenshot, the response, I got for the prompt I sent
-![3](https://github.com/user-attachments/assets/44e4b087-ee77-4b35-9a43-2e8f50f87782)
 ![2](https://github.com/user-attachments/assets/482cbac8-bbbf-4b44-b7a7-0861df65218d)
 
-Now that the application is containerized, we can deploy it on Kubernetes
+You can see in below screenshot, the response, I got for the prompt I sent
+
+![3](https://github.com/user-attachments/assets/44e4b087-ee77-4b35-9a43-2e8f50f87782)
+
+
 
 
 # Kubernetes Deployment and Horizontal Pod Autoscaler (HPA)
