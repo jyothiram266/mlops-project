@@ -26,19 +26,21 @@ Design, implement, and deploy a scalable Language Model inference service using 
 
 
 ```Dockerfile
-FROM ollama/ollama
+FROM python:latest
 
-WORKDIR /root
+# Create app directory
+WORKDIR /app
 
+# Copy the files
 COPY requirements.txt ./
+COPY app.py ./
 
-RUN apt update 
-RUN apt-get install -y python3 python3-pip vim git
+#install the dependecies
+RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 
 EXPOSE 8501
-EXPOSE 11434
-ENTRYPOINT ["./entrypoint.sh"]
+ENTRYPOINT ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
 ```
 Notice that we must set the WORKDIR=/root. This is where ollama is installed, and when we run ollama/serve, it’ll look for a data folder where the models will be stored, which is in the hidden folder .ollama. 
 In the final line, the ENTRYPOINT is a script, which is necessary because we need to run multiple commands when running the server the following command will be runned.
@@ -124,16 +126,55 @@ You can see in below screenshot, the response, I got for the prompt I sent
 
 Now that the application is containerized, we can deploy it on Kubernetes
 
-### Kubernetes Deployment
 
-Depolyment-manifest-file
+# Kubernetes Deployment and Horizontal Pod Autoscaler (HPA)
+
+This repository contains the configuration for deploying `ollama-container` and `streamlit-app` on Kubernetes, setting up a Horizontal Pod Autoscaler (HPA) for `ollama-container`, and managing persistent storage with Persistent Volume Claims (PVCs) and Storage Classes.
+
+## Deployment Configuration
+
+### 1. Setup Persistent Volume Claim (PVC) and Storage Class
+
+Persistent Volume Claims (PVCs) provide a way for applications to request and use storage that persists beyond the lifecycle of individual Pods, ensuring data remains available. Storage Classes allow you to specify different types of storage with various performance characteristics, so you can choose the right storage solution based on your needs.
+
+#### Storage Class Manifest (`storageclass.yaml`)
+
+```yaml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: standard
+provisioner: kubernetes.io/aws-ebs # Replace with the appropriate provisioner for your environment
+parameters:
+  type: gp2 # Specify the type of storage, this can vary based on your cloud provider
 ```
+The StorageClass defines the type of storage to be used for PVCs. Adjust the provisioner and parameters according to your cloud provider or storage requirements.
+
+### Persistent Volume Claim Manifest (ollama-pvc.yaml)
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ollama-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: standard
+```
+The PVC requests storage resources based on the StorageClass. Adjust storage size and storageClassName based on your requirements.
+
+### Deploy ollama-container
+Deployment Manifest (ollama-container-deployment.yaml)
+```yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: ollama-container
 spec:
-  replicas: 3  # Adjust as needed
+  replicas: 1
   selector:
     matchLabels:
       app: ollama-container
@@ -144,44 +185,131 @@ spec:
     spec:
       containers:
       - name: ollama-container
-        image: jyothiram266/ollama-service
-        ports:
-        - containerPort: 8501
-        - containerPort: 11434
+        image: ollama/ollama
         volumeMounts:
-        - name: ollama-data
-          mountPath: /root/.ollama  # Mount path inside the container
+        - mountPath: /root/.ollama
+          name: ollama-volume
+        ports:
+        - containerPort: 11434
       volumes:
-      - name: ollama-data
-        emptyDir: {}  # Define emptyDir volume
-
+      - name: ollama-volume
+        persistentVolumeClaim:
+          claimName: ollama-pvc
 ```
-Service-manifest-file
+This manifest sets up the ollama-container deployment with a single replica and mounts the PVC for storage.
 
-```
+### Service Manifest (ollama-container-service.yaml)
+```yaml
 apiVersion: v1
 kind: Service
 metadata:
-  name: ollama-service
+  name: ollama-container
 spec:
-  type: NodePort
   selector:
     app: ollama-container
   ports:
-    - protocol: TCP
-      port: 11434
-      targetPort: 11434
-    - protocol: TCP
-      port: 8501
-      targetPort: 8501
-  
-
+  - protocol: TCP
+    port: 11434
+    targetPort: 11434
+  type: ClusterIP
 ```
+The ClusterIP service makes ollama-container accessible within the cluster.
 
-#### Deployment Process
-- Apply Manifest: Use ```kubectl apply -f deployment.yaml``` to deploy the ollama-container and associated emptyDir volume configuration and use ```kubectl apply -f service.yaml``` to deploy the ollama-service.
-- Verify Deployment: Use ```kubectl get deployments``` , ```kubectl get svc``` and ```kubectl get pods``` to verify that the deployment and the service is successful and pods are running.
-- Access Pod: Use ```kubectl exec -it <ollama-pod-name> -- /bin/bash``` to access the running pod and check the contents of /root/.ollama to verify the usage of the emptyDir volume.
+### Deploy streamlit-app
+Deployment Manifest (streamlit-app-deployment.yaml)
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: streamlit-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: streamlit-app
+  template:
+    metadata:
+      labels:
+        app: streamlit-app
+    spec:
+      containers:
+      - name: streamlit-app
+        image: jyothiram266/streamlight-app
+        ports:
+        - containerPort: 8501
+        env:
+        - name: OLLAMA_CONTAINER_SERVICE_HOST
+          value: "ollama-container"
+        - name: OLLAMA_CONTAINER_SERVICE_PORT
+          value: "11434"
+```
+The deployment configuration for streamlit-app ensures it communicates with ollama-container via environment variables.
+
+### Service Manifest (streamlit-app-service.yaml)
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: streamlit-app
+spec:
+  selector:
+    app: streamlit-app
+  ports:
+  - protocol: TCP
+    port: 8501
+    targetPort: 8501
+    nodePort: 30001 # Choose a port in the range 30000-32767
+  type: NodePort
+```
+The NodePort service exposes streamlit-app externally on port 30001.
+
+### Horizontal Pod Autoscaler (HPA)
+HPA Manifest (hpa.yaml)
+```yaml
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ollama-container-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ollama-container
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50
+```
+The HPA automatically adjusts the number of replicas for ollama-container based on CPU utilization.
+
+Applying the Configurations
+Apply the manifests to your Kubernetes cluster in the following order:
+
+```sh
+kubectl apply -f storageclass.yaml
+kubectl apply -f ollama-pvc.yaml
+kubectl apply -f ollama-container-deployment.yaml
+kubectl apply -f ollama-container-service.yaml
+kubectl apply -f streamlit-app-deployment.yaml
+kubectl apply -f streamlit-app-service.yaml
+kubectl apply -f hpa.yaml
+```
+Monitoring and Adjustments
+Check HPA Status:
+```
+kubectl get hpa
+```
+Adjust Settings: You may need to tweak averageUtilization, minReplicas, and maxReplicas based on application performance and requirements.
+
+For more details on HPA and metrics, refer to the Kubernetes documentation on Horizontal Pod Autoscaling.
+
+#### Summary
+This setup deploys ollama-container and streamlit-app, configures persistent storage, exposes streamlit-app externally, and scales ollama-container based on CPU usage to ensure efficient resource management and application responsiveness.
 
 ### Load Testing
 We used k6 for load testing. Below is a k6 script for simulating various levels of concurrent requests.
@@ -381,10 +509,23 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
-      - name: Build and push Docker image
-        run: |
-          docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/ollama-service:latest .
-          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/ollama-service:latest
+      - name: OWASP Dependency-Check
+        uses: dependency-check/scan-action@v2
+        with:
+          project: my-project
+          format: 'ALL'
+          scan: .
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Docker image
+        run: docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/ollama-service:latest .
+
+      - name: Security scan with Trivy
+        run: docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image ${{ secrets.DOCKER_HUB_USERNAME }}/ollama-service:latest
+
+      - name: Push Docker image
+        run: docker push ${{ secrets.DOCKER_HUB_USERNAME }}/ollama-service:latest
 
   deploy:
     runs-on: ubuntu-latest

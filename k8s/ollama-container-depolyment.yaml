@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama-container
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ollama-container
+  template:
+    metadata:
+      labels:
+        app: ollama-container
+    spec:
+      containers:
+      - name: ollama-container
+        image: ollama/ollama
+        volumeMounts:
+        - mountPath: /root/.ollama
+          name: ollama-volume
+        ports:
+        - containerPort: 11434
+      volumes:
+      - name: ollama-volume
+        hostPath:
+          path: ./data/ollama
