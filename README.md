@@ -454,6 +454,8 @@ To automate the build and deployment process for your Ollama service using GitHu
 
 ### GitHub Actions Workflow
 
+![13](https://raw.githubusercontent.com/jyothiram266/mlops-project/master/screenshots/13.png)
+
 Below is the YAML configuration (deploy.yml) for the CI/CD pipeline using GitHub Actions. This workflow builds your Docker image, pushes it to Docker Hub, and deploys it to AWS EKS:
 
 ```
