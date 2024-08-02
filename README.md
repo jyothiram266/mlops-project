@@ -278,6 +278,8 @@ Adjust Settings: You may need to tweak averageUtilization, minReplicas, and maxR
 
 For more details on HPA and metrics, refer to the Kubernetes documentation on Horizontal Pod Autoscaling.
 
+![18](https://raw.githubusercontent.com/jyothiram266/mlops-project/master/screenshots/12.png)
+
 #### Summary
 This setup deploys ollama-container and streamlit-app, configures persistent storage, exposes streamlit-app externally, and scales ollama-container based on CPU usage to ensure efficient resource management and application responsiveness.
 
