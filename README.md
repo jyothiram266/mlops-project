@@ -53,6 +53,8 @@ We are using the python docker image, as the base image, and creating a working 
 
 We can build the docker image using docker build command, as shown below.
 
+```docker build -t dockerusername/chatbot:v1 . ```
+
 You should be able to check if the Docker image is built, using docker images command, as shown below.
 
 
@@ -501,29 +503,46 @@ jobs:
       - name: Push Docker image
         run: docker push ${{ secrets.DOCKER_HUB_USERNAME }}/ollama-service:latest
 
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
+deploy:
+  runs-on: ubuntu-latest
+  needs: build
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-      - name: Install AWS CLI
-        uses: aws-actions/aws-cli-action@v2
+    - name: Install AWS CLI
+      uses: aws-actions/aws-cli-action@v2
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Update kubeconfig with EKS cluster
-        run: aws eks update-kubeconfig --name <your-cluster-name> --region ${{ secrets.AWS_REGION }}
+    - name: Install kubectl
+      run: |
+        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+        chmod +x kubectl
+        sudo mv kubectl /usr/local/bin/kubectl
 
-      - name: Deploy to EKS
-        run: kubectl apply -f kubernetes/deployment.yaml -f kubernetes/service.yaml -f kubernetes/hpa.yaml
+    - name: Update kubeconfig with EKS cluster
+      run: |
+        aws eks update-kubeconfig \
+          --name ${{secrets.CLUSTER_NAME}} \
+          --region ${{ secrets.AWS_REGION }}
+
+    - name: Set Kubernetes context
+      run: kubectl config set-context --current --namespace=default
+
+    - name: Apply all Kubernetes manifests
+      run: |
+        kubectl apply -f k8s/
+
+    - name: Verify Deployment Status
+      run: kubectl rollout status deployment/<deployment-name>
+
 ```
 #### Usage Instructions
 
