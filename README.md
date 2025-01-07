@@ -70,7 +70,7 @@ services:
     ports:
       - 11434:11434
   streamlit-app:
-    image: jyothiram266/streamlight-app
+    image: dockerusername/chatbot:v1
     ports:
       - 8501:8501
 ```
