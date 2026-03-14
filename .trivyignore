@@ -1,0 +1,7 @@
+# Trivy Ignore Rules
+# ------------------
+# Add CVEs to ignore here (one per line) with a comment explaining why.
+# Format: CVE-YYYY-NNNNN  # reason for ignoring
+#
+# Example:
+# CVE-2023-12345  # False positive — not applicable in our runtime environment

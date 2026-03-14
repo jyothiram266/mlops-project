@@ -1,0 +1,128 @@
+# =============================================================================
+# ML Platform Helm Chart — Default Values
+# =============================================================================
+
+replicaCount: 2
+
+image:
+  repository: jyothiram266/ml-platform
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+nameOverride: ""
+fullnameOverride: ""
+
+# ---------------------------------------------------------------------------
+# Service Account & RBAC
+# ---------------------------------------------------------------------------
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+rbac:
+  create: true
+
+# ---------------------------------------------------------------------------
+# Service
+# ---------------------------------------------------------------------------
+service:
+  type: ClusterIP
+  port: 8000
+  targetPort: 8000
+
+# ---------------------------------------------------------------------------
+# Resource Limits & Requests
+# ---------------------------------------------------------------------------
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+# ---------------------------------------------------------------------------
+# Horizontal Pod Autoscaler
+# ---------------------------------------------------------------------------
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# ---------------------------------------------------------------------------
+# Persistent Volume Claim (Model Storage)
+# ---------------------------------------------------------------------------
+persistence:
+  enabled: true
+  storageClass: ""
+  accessModes:
+    - ReadWriteOnce
+  size: 5Gi
+  mountPath: /app/models
+
+# ---------------------------------------------------------------------------
+# Probes
+# ---------------------------------------------------------------------------
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 15
+  periodSeconds: 20
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /ready
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# ---------------------------------------------------------------------------
+# Security Context
+# ---------------------------------------------------------------------------
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# ---------------------------------------------------------------------------
+# Network Policy
+# ---------------------------------------------------------------------------
+networkPolicy:
+  enabled: true
+
+# ---------------------------------------------------------------------------
+# Pod annotations (Prometheus scraping)
+# ---------------------------------------------------------------------------
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8000"
+  prometheus.io/path: "/metrics"
+
+# ---------------------------------------------------------------------------
+# Node Selector / Tolerations / Affinity
+# ---------------------------------------------------------------------------
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# ---------------------------------------------------------------------------
+# Environment Variables
+# ---------------------------------------------------------------------------
+env:
+  MODEL_PATH: /app/models/model.joblib

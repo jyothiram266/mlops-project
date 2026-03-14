@@ -1,0 +1,168 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "title": "Request Rate (req/s)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{namespace=\"ml-platform\"}[5m]))",
+          "legendFormat": "Total Requests/s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 2, "fillOpacity": 20, "gradientMode": "scheme" }
+        }
+      }
+    },
+    {
+      "title": "Response Latency (p50 / p95 / p99)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{namespace=\"ml-platform\"}[5m])) by (le))",
+          "legendFormat": "p50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace=\"ml-platform\"}[5m])) by (le))",
+          "legendFormat": "p95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{namespace=\"ml-platform\"}[5m])) by (le))",
+          "legendFormat": "p99"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": { "lineWidth": 2, "fillOpacity": 10 }
+        }
+      }
+    },
+    {
+      "title": "Error Rate (5xx)",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{namespace=\"ml-platform\", status=~\"5..\"}[5m])) / sum(rate(http_requests_total{namespace=\"ml-platform\"}[5m])) * 100",
+          "legendFormat": "Error %"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 5 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "Active Pods",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 8 },
+      "targets": [
+        {
+          "expr": "count(kube_pod_info{namespace=\"ml-platform\", pod=~\"ml-platform.*\"})",
+          "legendFormat": "Pods"
+        }
+      ]
+    },
+    {
+      "title": "CPU Usage",
+      "type": "gauge",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "expr": "avg(rate(container_cpu_usage_seconds_total{namespace=\"ml-platform\", container=\"ml-platform\"}[5m])) * 100",
+          "legendFormat": "CPU %"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "max": 100,
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 60 },
+              { "color": "red", "value": 85 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "Memory Usage",
+      "type": "gauge",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 8 },
+      "targets": [
+        {
+          "expr": "avg(container_memory_working_set_bytes{namespace=\"ml-platform\", container=\"ml-platform\"}) / avg(kube_pod_container_resource_limits{namespace=\"ml-platform\", container=\"ml-platform\", resource=\"memory\"}) * 100",
+          "legendFormat": "Memory %"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "max": 100,
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "red", "value": 90 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "Predictions by Class",
+      "type": "piechart",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "targets": [
+        {
+          "expr": "sum by (prediction_label) (increase(ml_predictions_total{namespace=\"ml-platform\"}[1h]))",
+          "legendFormat": "{{prediction_label}}"
+        }
+      ]
+    },
+    {
+      "title": "Inference Time Distribution",
+      "type": "histogram",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "targets": [
+        {
+          "expr": "sum(rate(http_request_duration_seconds_bucket{namespace=\"ml-platform\", handler=\"/predict\"}[5m])) by (le)",
+          "legendFormat": "{{le}}s",
+          "format": "heatmap"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["ml-platform", "inference", "kubernetes"],
+  "templating": { "list": [] },
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "ML Inference Platform",
+  "uid": "ml-platform-overview",
+  "version": 1
+}

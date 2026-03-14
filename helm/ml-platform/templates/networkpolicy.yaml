@@ -1,0 +1,26 @@
+{{- if .Values.networkPolicy.enabled -}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ml-platform.fullname" . }}
+  labels:
+    {{- include "ml-platform.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "ml-platform.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    # Allow traffic only on the application port
+    - ports:
+        - port: {{ .Values.service.targetPort }}
+          protocol: TCP
+      from:
+        # Allow from any pod in the same namespace
+        - podSelector: {}
+        # Allow from Prometheus (for metrics scraping)
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+{{- end }}
